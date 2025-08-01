@@ -1,19 +1,18 @@
-import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  TextInput, 
-  TouchableOpacity, 
-  Alert, 
-  ActivityIndicator,
-  ScrollView,
-  Dimensions,
-  Platform
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import axios from 'axios';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity
+} from 'react-native';
 
 interface DetectionResult {
   prediction: 'Human' | 'AI';
@@ -39,7 +38,7 @@ export default function AITextDetectorScreen() {
 
     setIsLoading(true);
     try {
-      const response = await axios.post('http://localhost:8000/detect', {
+      const response = await axios.post('http://192.168.128.108:8000/detect', {
         text: inputText
       });
       
