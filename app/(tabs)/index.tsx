@@ -3,7 +3,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,17 +18,42 @@ interface DetectionResult {
   prediction: 'Human' | 'AI';
   confidence: number;
 }
-
 const { width, height } = Dimensions.get('window');
 
 export default function AITextDetectorScreen() {
   const [inputText, setInputText] = useState('');
   const [result, setResult] = useState<DetectionResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [serverStatus, setServerStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown');
 
+  // Move all hook calls to the top and ensure they're always called
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
   const cardColor = useThemeColor({ light: '#ffffff', dark: '#1a1a1a' }, 'background');
+  const borderColor = useThemeColor({ light: '#e0e0e0', dark: '#333' }, 'text');
+  const inputBackgroundColor = useThemeColor({ light: '#f8f9fa', dark: '#2a2a2a' }, 'background');
+  const placeholderColor = useThemeColor({ light: '#999', dark: '#666' }, 'text');
+  const progressBackgroundColor = useThemeColor({ light: '#e0e0e0', dark: '#333' }, 'text');
+
+  // Auto-check server connection on component mount
+  useEffect(() => {
+    testServerConnection();
+  }, []);
+
+  const testServerConnection = async () => {
+    try {
+      const response = await axios.get('http://192.168.128.108:8000/health', {
+        timeout: 5000
+      });
+      
+      if (response.status === 200) {
+        setServerStatus('connected');
+      }
+    } catch (error) {
+      console.error('Server connection test failed:', error);
+      setServerStatus('disconnected');
+    }
+  };
 
   const analyzeText = async () => {
     if (!inputText.trim()) {
@@ -70,6 +95,16 @@ export default function AITextDetectorScreen() {
     return 'Low';
   };
 
+  const getServerStatusColor = () => {
+    return serverStatus === 'connected' ? '#4CAF50' : 
+           serverStatus === 'disconnected' ? '#FF5722' : '#FFC107';
+  };
+
+  const getServerStatusText = () => {
+    return serverStatus === 'connected' ? 'Connected' : 
+           serverStatus === 'disconnected' ? 'Disconnected' : 'Unknown';
+  };
+
   return (
     <ScrollView style={[styles.container, { backgroundColor }]} showsVerticalScrollIndicator={false}>
       <LinearGradient
@@ -82,21 +117,45 @@ export default function AITextDetectorScreen() {
         <ThemedText style={styles.headerSubtitle}>
           Detect if text is written by AI or Human
         </ThemedText>
+        
+        {/* Server Status Indicator */}
+        <ThemedView style={styles.serverStatusContainer}>
+          <ThemedView style={[
+            styles.statusIndicator, 
+            { backgroundColor: getServerStatusColor() }
+          ]} />
+          <ThemedText style={styles.serverStatusText}>
+            Server: {getServerStatusText()}
+          </ThemedText>
+        </ThemedView>
       </LinearGradient>
 
       <ThemedView style={[styles.content, { backgroundColor }]}>
+        {/* Test Connection Button */}
+        <ThemedView style={[styles.card, { backgroundColor: cardColor }]}>
+          <ThemedText style={styles.sectionTitle}>Server Connection</ThemedText>
+          <TouchableOpacity
+            style={[styles.button, styles.testButton]}
+            onPress={testServerConnection}
+          >
+            <ThemedText style={[styles.buttonText, { color: '#667eea' }]}>
+              Test Server Connection
+            </ThemedText>
+          </TouchableOpacity>
+        </ThemedView>
+
         <ThemedView style={[styles.card, { backgroundColor: cardColor }]}>
           <ThemedText style={styles.sectionTitle}>Enter Text to Analyze</ThemedText>
           <TextInput
             style={[styles.textInput, { 
               color: textColor,
-              borderColor: useThemeColor({ light: '#e0e0e0', dark: '#333' }, 'text'),
-              backgroundColor: useThemeColor({ light: '#f8f9fa', dark: '#2a2a2a' }, 'background')
+              borderColor: borderColor,
+              backgroundColor: inputBackgroundColor
             }]}
             multiline
             numberOfLines={6}
             placeholder="Paste or type the text you want to analyze..."
-            placeholderTextColor={useThemeColor({ light: '#999', dark: '#666' }, 'text')}
+            placeholderTextColor={placeholderColor}
             value={inputText}
             onChangeText={setInputText}
             textAlignVertical="top"
@@ -150,7 +209,7 @@ export default function AITextDetectorScreen() {
               </ThemedView>
 
               <ThemedView style={styles.progressBarContainer}>
-                <ThemedView style={[styles.progressBar, { backgroundColor: useThemeColor({ light: '#e0e0e0', dark: '#333' }, 'text') }]}>
+                <ThemedView style={[styles.progressBar, { backgroundColor: progressBackgroundColor }]}>
                   <ThemedView 
                     style={[
                       styles.progressFill, 
@@ -204,6 +263,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.9,
   },
+  serverStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 8,
+  },
+  statusIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  serverStatusText: {
+    color: '#fff',
+    fontSize: 12,
+    opacity: 0.9,
+  },
   content: {
     flex: 1,
     padding: 16,
@@ -255,6 +330,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#667eea',
   },
   secondaryButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#667eea',
+  },
+  testButton: {
     backgroundColor: 'transparent',
     borderWidth: 2,
     borderColor: '#667eea',
